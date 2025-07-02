@@ -1,0 +1,33 @@
+from mealpy.utils.problem import Problem
+from sklearn.tree import DecisionTreeRegressor
+from permetrics.regression import RegressionMetric
+class RegressionDT(Problem):
+    def __init__(self, lb, ub, minmax, data = None, name = "..::Decision Tree Algorithm Optimization With ICA Method (Regression Project)::..",                       **kwargs):
+        self.data = data
+        super().__init__(lb, ub, minmax, **kwargs)
+        self.name = name
+    def decode_solution(self, solution):
+        return {"max_depth": int(solution[0]),
+                "min_samples_split": int(solution[1]),
+                "min_samples_leaf": int(solution[2]),
+                "max_features": int(solution[3]),
+                "max_leaf_nodes": int(solution[4])}
+    def generate_trained_model(self, structure):
+        model = DecisionTreeRegressor(max_depth = structure["max_depth"],
+                                      min_samples_split = structure["min_samples_split"],
+                                      min_samples_leaf = structure["min_samples_leaf"],
+                                      max_features = structure["max_features"],
+                                      max_leaf_nodes = structure["max_leaf_nodes"],
+                                      random_state = 1)
+        model.fit(self.data["X_train"], self.data["y_train"])
+        return model
+    def generate_loss_value(self, structure):
+        model = self.generate_trained_model(structure)
+        y_pred = model.predict(self.data["X_test"])
+        evaluator = RegressionMetric(self.data["y_test"], y_pred, decimal = 6)
+        loss = evaluator.NRMSE()
+        return loss
+    def fit_func(self, solution):
+        structure = self.decode_solution(solution)
+        fitness = self.generate_loss_value(structure)
+        return fitness
